@@ -14,7 +14,7 @@ setup(
     author='Ronan Delacroix',
     author_email='ronan.delacroix@gmail.com',
     url='https://github.com/ronhanson/ec2-namer',
-    packages=find_packages(where='.', exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    py_modules=['ec2host'],
     package_data={},
     scripts=['bin/ec2-rename'],
     license=open('LICENCE.txt').read().strip(),
