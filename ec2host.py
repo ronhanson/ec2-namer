@@ -61,7 +61,7 @@ def check_ec2_hostname_tags():
             'number': new_lowest_available_number,
             'zone': instance_zone,
             'environment': env,
-            'internal-hostname': "{}-{}{}".format(group, new_lowest_available_number, suffix),
+            'internal-hostname': "{}-{}{}".format(group, new_lowest_available_number, suffix).replace('.', '-'),
             'public-hostname': "{}-{}{}".format(group, new_lowest_available_number, suffix),
             'Name': "{}-{}{}.{}".format(group, new_lowest_available_number, suffix, instance_zone),
             'url': "{}-{}{}.{}".format(group, new_lowest_available_number, suffix, instance_zone)
