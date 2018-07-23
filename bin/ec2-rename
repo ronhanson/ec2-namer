@@ -12,7 +12,7 @@ import tbx.network
 
 
 def main():
-    tbx.log.configure_logging_to_screen(debug=True)
+    tbx.log.configure_logging_to_screen(debug=False)
     logging.info("Checking EC2 tags, creating public DNS routes and updating hostname if necessary")
     ec2host.check_ec2_hostname_tags()  # check if instance is a duplicate or not
     internal_hostname = ec2host.create_public_routes()
