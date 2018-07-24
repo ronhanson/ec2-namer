@@ -15,7 +15,7 @@ def check_ec2_hostname_tags():
     instance = ec2.current_instance()
     tags = ec2.get_instance_tags(instance)
 
-    logging.info("Checking EC2 instance tags : %s" % str(instance))
+    logging.info("Checking EC2 instance tags of %s" % str(instance.id))
 
     instance_zone = tags.get('zone')
     group = tags.get('group')
@@ -23,6 +23,9 @@ def check_ec2_hostname_tags():
     env = tags.get('environment', None)
     internal_hostname = tags.get('internal-hostname', None)
     public_hostname = tags.get('public-hostname', None)
+
+    if not group or not zone:
+        logging.error('No group or zone tag found for instance %s' % instance.id)
 
     logging.info("Current instance tags : %s" % (', '.join(['%s=%s' % (str(k), str(v)) for k, v in tags.items()])))
 
@@ -36,7 +39,7 @@ def check_ec2_hostname_tags():
     other_instances = [inst for inst in instances_like_me if inst.id != instance.id]
     if len(other_instances) >= 1 or not internal_hostname or not public_hostname:
         logging.warning("Found %d instances having same group and number (%s). Updating EC2 tags." % (
-            len(other_instances), ', '.join([str(i) for i in other_instances])
+            len(other_instances), ', '.join([i.id for i in other_instances])
         ))
 
         # found another instance like me, so I am going to change tags and edit my name
@@ -71,7 +74,7 @@ def check_ec2_hostname_tags():
         ec2.create_tags(instance, tags=new_tags)
 
         instance.reload()
-        logging.info("Instance %s updated" % str(instance))
+        logging.info("Instance %s updated" % str(instance.id))
         return True
     else:
         return False
@@ -83,7 +86,7 @@ def create_public_routes():
     instance = ec2.current_instance()
     tags = ec2.get_instance_tags(instance)
 
-    logging.info("Ensuring public routes for instance : %s" % str(instance))
+    logging.info("Ensuring public routes for instance %s" % str(instance.id))
 
     instance_zone = tags.get('zone', None)
     public_hostname = tags.get('public-hostname', None)
@@ -97,7 +100,7 @@ def create_public_routes():
 
         r53.delete_record(zone_id, dns_record_name)  # if a route already exists, delete it
         r53.create_record(zone_id, dns_record_name, instance.public_ip_address, type='A', ttl=300)
-        logging.info("DNS records created/updated - %s %s => %s" % (instance_zone, dns_record_name, instance.public_ip_address))
+        logging.info("DNS records created/updated - %s %s => %s (%s)" % (instance_zone, dns_record_name, instance.public_ip_address, instance.id))
 
     return internal_hostname
 
