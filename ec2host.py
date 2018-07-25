@@ -24,8 +24,9 @@ def check_ec2_hostname_tags():
     internal_hostname = tags.get('internal-hostname', None)
     public_hostname = tags.get('public-hostname', None)
 
-    if not group or not zone:
+    if not group or not instance_zone:
         logging.error('No group or zone tag found for instance %s' % instance.id)
+        return None
 
     logging.info("Current instance tags : %s" % (', '.join(['%s=%s' % (str(k), str(v)) for k, v in tags.items()])))
 
@@ -101,6 +102,9 @@ def create_public_routes():
         r53.delete_record(zone_id, dns_record_name)  # if a route already exists, delete it
         r53.create_record(zone_id, dns_record_name, instance.public_ip_address, type='A', ttl=300)
         logging.info("DNS records created/updated - %s %s => %s (%s)" % (instance_zone, dns_record_name, instance.public_ip_address, instance.id))
+    else:
+        logging.error("Impossible to create public routes as no public-hostname or internal-hostname tags have been found for instance %s." % instance.id)
+        return None
 
     return internal_hostname
 
