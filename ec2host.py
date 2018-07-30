@@ -17,28 +17,29 @@ def check_ec2_hostname_tags():
 
     logging.info("Checking EC2 instance tags of %s" % str(instance.id))
 
-    instance_zone = tags.get('zone')
+    public_zone = tags.get('public-zone')
+    private_zone = tags.get('private-zone')
     group = tags.get('group')
     number = tags.get('number', "0001")
     env = tags.get('environment', None)
-    internal_hostname = tags.get('internal-hostname', None)
+    private_hostname = tags.get('private-hostname', None)
     public_hostname = tags.get('public-hostname', None)
 
-    if not group or not instance_zone:
+    if not group or not private_zone:
         logging.error('No group or zone tag found for instance %s' % instance.id)
         return None
 
     logging.info("Current instance tags : %s" % (', '.join(['%s=%s' % (str(k), str(v)) for k, v in tags.items()])))
 
     instances_like_me = ec2.get_instances_by_tags(tags={
-        'zone': instance_zone,
+        'private-zone': private_zone,
         'group': group,
         'number': number,
         'environment': env
     })
 
     other_instances = [inst for inst in instances_like_me if inst.id != instance.id]
-    if len(other_instances) >= 1 or not internal_hostname or not public_hostname:
+    if len(other_instances) >= 1 or not private_hostname or not public_hostname:
         logging.warning("Found %d instances having same group and number (%s). Updating EC2 tags." % (
             len(other_instances), ', '.join([i.id for i in other_instances])
         ))
@@ -46,7 +47,7 @@ def check_ec2_hostname_tags():
         # found another instance like me, so I am going to change tags and edit my name
         group_instances = ec2.get_instances_by_tags(tags={
             'group': group,
-            'zone': instance_zone,
+            'private-zone': private_zone,
             'environment': env
         })
         group_instances_numbers = [ec2.get_instance_tags(inst).get('number') for inst in group_instances if
@@ -60,15 +61,17 @@ def check_ec2_hostname_tags():
         suffix = '.' + env
         if env == 'prod':
             suffix = ''
+        public_hostname = "{}-{}{}".format(group, new_lowest_available_number, suffix)
+        private_hostname = public_hostname.replace('.', '-')
         new_tags = {
             'group': group,
             'number': new_lowest_available_number,
-            'zone': instance_zone,
+            'public-zone': public_zone,
+            'private-zone': private_zone,
             'environment': env,
-            'internal-hostname': "{}-{}{}".format(group, new_lowest_available_number, suffix).replace('.', '-'),
-            'public-hostname': "{}-{}{}".format(group, new_lowest_available_number, suffix),
-            'Name': "{}-{}{}.{}".format(group, new_lowest_available_number, suffix, instance_zone),
-            'url': "{}-{}{}.{}".format(group, new_lowest_available_number, suffix, instance_zone)
+            'private-hostname': private_hostname,
+            'public-hostname': public_hostname,
+            'Name': "{}.{}".format(public_hostname, public_zone)
         }
         logging.info("New instance tags : %s" % (', '.join(['%s=%s' % (str(k), str(v)) for k, v in new_tags.items()])))
         # Update tags of current instance
@@ -89,23 +92,45 @@ def create_public_routes():
 
     logging.info("Ensuring public routes for instance %s" % str(instance.id))
 
-    instance_zone = tags.get('zone', None)
+    public_zone = tags.get('public-zone', None)
     public_hostname = tags.get('public-hostname', None)
-    internal_hostname = tags.get('internal-hostname', None)
 
-    if instance_zone and public_hostname:
-        r53 = tbx.aws.Route53()
-        zone_id = r53.get_zone_id(name=instance_zone)
+    private_zone = tags.get('private-zone', None)
+    private_hostname = tags.get('private-hostname', None)
 
-        dns_record_name = public_hostname + '.' + instance_zone + '.'
+    r53 = tbx.aws.Route53()
 
-        r53.delete_record(zone_id, dns_record_name)  # if a route already exists, delete it
-        r53.create_record(zone_id, dns_record_name, instance.public_ip_address, type='A', ttl=300)
-        logging.info("DNS records created/updated - %s %s => %s (%s)" % (instance_zone, dns_record_name, instance.public_ip_address, instance.id))
+    if private_zone and private_hostname:
+        private_zone_id = r53.get_zone_id(name=private_zone)
+
+        private_dns_record_name = private_hostname + '.' + private_zone + '.'
+
+        r53.delete_record(private_zone_id, private_dns_record_name)  # if a route already exists, delete it
+        r53.create_record(private_zone_id, private_dns_record_name, instance.private_ip_address, type='A', ttl=300)
+        logging.info("Internal DNS records created/updated - %s %s => %s (%s)" % (private_zone, private_dns_record_name, instance.private_ip_address, instance.id))
     else:
-        logging.error("Impossible to create public routes as no public-hostname or internal-hostname tags have been found for instance %s." % instance.id)
+        logging.error("Impossible to create internal routes as no private-zone or private-hostname tags have been found for instance %s." % instance.id)
         return None
 
-    return internal_hostname
+    if public_zone and public_hostname:
+        public_zone_id = r53.get_zone_id(name=public_zone)
+
+        public_dns_record_name = public_hostname + '.' + public_zone + '.'
+
+        r53.delete_record(public_zone_id, public_dns_record_name)  # if a route already exists, delete it
+        r53.create_record(public_zone_id, public_dns_record_name, instance.public_ip_address, type='A', ttl=300)
+        logging.info("Public DNS records created/updated - %s %s => %s (%s)" % (public_zone, public_dns_record_name, instance.public_ip_address, instance.id))
+    else:
+        logging.error("Impossible to create public routes as no public-hostname or private-hostname tags have been found for instance %s." % instance.id)
+        return None
+
+    ec2.create_tags(instance, tags={
+        'public-dns': "{}.{}".format(public_hostname, public_zone),
+        'private-dns': "{}.{}".format(private_hostname, private_zone)
+    })
+    instance.reload()
+    tags = ec2.get_instance_tags(instance)
+
+    return tags
 
 

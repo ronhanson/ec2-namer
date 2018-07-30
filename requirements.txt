@@ -1,4 +1,4 @@
 boto3
 requests
 tbx.aws >= 0.1.3
-tbx >= 1.8.11
+tbx >= 1.8.12
