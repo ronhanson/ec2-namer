@@ -93,7 +93,7 @@ def create_dns_record(r53, zone, dns, ip_address):
     dns_record_name = dns + '.' + zone + '.'
 
     r53.delete_record(zone_id, dns_record_name)  # if a route already exists, delete it
-    r53.create_record(zone_id, dns_record_name, ip_address, type='A', ttl=300)
+    r53.create_record(zone_id, dns_record_name, ip_address, record_type='A', ttl=300)
     logging.info("DNS record created/updated - %s %s => %s" % (zone, dns_record_name, str(ip_address)))
 
 
@@ -123,8 +123,9 @@ def create_public_routes():
     instance.reload()
     tags = ec2.get_instance_tags(instance)
 
+    ##
     # Create / Update service dns entries
-
+    ##
     group = tags.get('group')
     env = tags.get('environment', None)
     service_name = tags.get('service-name', None)
