@@ -25,6 +25,7 @@ def check_ec2_hostname_tags():
     env = tags.get('environment', None)
     private_hostname = tags.get('private-hostname', None)
     public_hostname = tags.get('public-hostname', None)
+    service_name = tags.get('service-name', None)
 
     if not group or not private_zone:
         logging.error('No group or zone tag found for instance %s' % instance.id)
@@ -40,7 +41,7 @@ def check_ec2_hostname_tags():
     })
 
     other_instances = [inst for inst in instances_like_me if inst.id != instance.id]
-    if len(other_instances) >= 1 or not private_hostname or not public_hostname:
+    if len(other_instances) >= 1 or not private_hostname or not public_hostname or not service_name:
         logging.warning("Found %d instances having same group and number (%s). Updating EC2 tags." % (
             len(other_instances), ', '.join([i.id for i in other_instances])
         ))
@@ -94,7 +95,7 @@ def create_dns_record(r53, zone, dns, ip_address):
 
     r53.delete_record(zone_id, dns_record_name)  # if a route already exists, delete it
     r53.create_record(zone_id, dns_record_name, ip_address, record_type='A', ttl=300)
-    logging.info("DNS record created/updated - %s %s => %s" % (zone, dns_record_name, str(ip_address)))
+    logging.info("DNS record created/updated - %s %s => %s" % (zone_id, dns_record_name, str(ip_address)))
 
 
 def create_public_routes():
@@ -126,31 +127,33 @@ def create_public_routes():
     ##
     # Create / Update service dns entries
     ##
-    group = tags.get('group')
-    env = tags.get('environment', None)
     service_name = tags.get('service-name', None)
 
-    instances_same_group = ec2.get_instances_by_tags(tags={
-        'private-zone': private_zone,
-        'group': group,
-        'environment': env
-    })
+    if service_name:
+        group = tags.get('group')
+        env = tags.get('environment', None)
+        
+        instances_same_group = ec2.get_instances_by_tags(tags={
+            'private-zone': private_zone,
+            'group': group,
+            'environment': env
+        })
 
-    public_ip_adresses = [(int(ec2.get_instance_tags(i).get('number')), i.public_ip_address) for i in instances_same_group]
-    private_ip_adresses = [(int(ec2.get_instance_tags(i).get('number')), i.private_ip_address) for i in instances_same_group]
+        public_ip_adresses = [(int(ec2.get_instance_tags(i).get('number')), i.public_ip_address) for i in instances_same_group]
+        private_ip_adresses = [(int(ec2.get_instance_tags(i).get('number')), i.private_ip_address) for i in instances_same_group]
 
-    public_ip_adresses = [ip for i, ip in sorted(public_ip_adresses, key=itemgetter(0))]
-    private_ip_adresses = [ip for i, ip in sorted(private_ip_adresses, key=itemgetter(0))]
+        public_ip_adresses = [ip for i, ip in sorted(public_ip_adresses, key=itemgetter(0))]
+        private_ip_adresses = [ip for i, ip in sorted(private_ip_adresses, key=itemgetter(0))]
 
-    create_dns_record(r53, public_zone, service_name, public_ip_adresses)
-    create_dns_record(r53, private_zone, service_name, private_ip_adresses)
+        create_dns_record(r53, public_zone, service_name, public_ip_adresses)
+        create_dns_record(r53, private_zone, service_name, private_ip_adresses)
 
-    ec2.create_tags(instance, tags={
-        'public-service-dns': "{}.{}".format(service_name, public_zone),
-        'private-service-dns': "{}.{}".format(service_name, private_zone)
-    })
-    instance.reload()
-    tags = ec2.get_instance_tags(instance)
+        ec2.create_tags(instance, tags={
+            'public-service-dns': "{}.{}".format(service_name, public_zone),
+            'private-service-dns': "{}.{}".format(service_name, private_zone)
+        })
+        instance.reload()
+        tags = ec2.get_instance_tags(instance)
 
     return tags
 
