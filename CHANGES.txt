@@ -8,3 +8,4 @@
 2018-07-25	--	v0.1.7	-- Fix
 
 2018-07-30	--	v0.2.0	-- Now creates private zone entry and public zone entry.
+2018-07-30	--	v0.3.0	-- Added service url routes
