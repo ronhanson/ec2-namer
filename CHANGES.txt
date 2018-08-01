@@ -9,7 +9,9 @@
 
 2018-07-30	--	v0.2.0	-- Now creates private zone entry and public zone entry.
 2018-07-30	--	v0.3.0	-- Added service url routes
-2018-07-30	--	v0.3.1	-- Fix:wq
+2018-07-30	--	v0.3.1	-- Fix
 2018-07-30	--	v0.3.2	-- Fix
 2018-07-30	--	v0.3.3	-- Fix
-2018-08-01	--	v0.3.4	-- Fix:wq
+2018-08-01	--	v0.3.4	-- Fix
+
+2018-08-01	--	v0.3.5	-- Fix
