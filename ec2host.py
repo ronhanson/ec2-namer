@@ -54,7 +54,7 @@ def check_ec2_hostname_tags():
         })
         group_instances_numbers = [ec2.get_instance_tags(inst).get('number') for inst in group_instances if
                                    inst.id != instance.id]
-        group_instances_numbers.sort()
+        group_instances_numbers = sorted(group_instances_numbers)
         new_lowest_available_number = None
         for i in range(1, 999):
             if "%04d" % i not in group_instances_numbers:
