@@ -132,15 +132,15 @@ def create_public_routes():
     if service_name:
         group = tags.get('group')
         env = tags.get('environment', None)
-        
+
         instances_same_group = ec2.get_instances_by_tags(tags={
             'private-zone': private_zone,
             'group': group,
             'environment': env
         })
 
-        public_ip_adresses = [(int(ec2.get_instance_tags(i).get('number')), i.public_ip_address) for i in instances_same_group]
-        private_ip_adresses = [(int(ec2.get_instance_tags(i).get('number')), i.private_ip_address) for i in instances_same_group]
+        public_ip_adresses = [(int(ec2.get_instance_tags(i).get('number', 1000)), i.public_ip_address) for i in instances_same_group]
+        private_ip_adresses = [(int(ec2.get_instance_tags(i).get('number', 1000)), i.private_ip_address) for i in instances_same_group]
 
         public_ip_adresses = [ip for i, ip in sorted(public_ip_adresses, key=itemgetter(0))]
         private_ip_adresses = [ip for i, ip in sorted(private_ip_adresses, key=itemgetter(0))]
