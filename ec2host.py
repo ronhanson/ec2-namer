@@ -77,6 +77,7 @@ def check_ec2_hostname_tags():
     private_hostname = public_hostname.replace('.', '-')
     new_tags = {
         'number': number,
+        "hostname": private_hostname,
         'Name': "{}.{}".format(public_hostname, public_zone)
     }
 
@@ -135,11 +136,11 @@ def create_public_routes():
 
     if private_zone:
         create_dns_record(r53, private_zone, private_hostname, instance.private_ip_address)
-        ec2.create_tags(instance, tags={'private-dns': "{}.{}".format(private_hostname, private_zone)})
+        ec2.create_tag(instance, key='private-dns', value="{}.{}".format(private_hostname, private_zone))
 
     if public_zone:
         create_dns_record(r53, public_zone, public_hostname, instance.public_ip_address)
-        ec2.create_tags(instance, tags={'public-dns': "{}.{}".format(public_hostname, public_zone)})
+        ec2.create_tag(instance, key='public-dns', value="{}.{}".format(public_hostname, public_zone))
 
     instance.reload()
     tags = ec2.get_instance_tags(instance)
@@ -163,7 +164,7 @@ def create_public_routes():
         ]
         private_ip_adresses = [ip for i, ip in sorted(private_ip_adresses, key=itemgetter(0)) if ip]
         create_dns_record(r53, private_zone, service_name, private_ip_adresses)
-        ec2.create_tags(instance, tags={'private-service-dns': "{}.{}".format(service_name, private_zone)})
+        ec2.create_tag(instance, key='private-service-dns', value="{}.{}".format(service_name, private_zone))
 
     if public_zone:
         public_ip_adresses = [
@@ -173,7 +174,7 @@ def create_public_routes():
         ]
         public_ip_adresses = [ip for i, ip in sorted(public_ip_adresses, key=itemgetter(0)) if ip]
         create_dns_record(r53, public_zone, service_name, public_ip_adresses)
-        ec2.create_tags(instance, tags={'public-service-dns': "{}.{}".format(service_name, public_zone)})
+        ec2.create_tags(instance, key='public-service-dns', value="{}.{}".format(service_name, public_zone))
 
     instance.reload()
     tags = ec2.get_instance_tags(instance)

@@ -17,3 +17,4 @@
 2018-08-01	--	v0.3.5	-- Fix
 2018-08-01	--	v0.3.6	-- Fix
 2018-08-02	--	v0.4.0	-- Refactoring and some behavior changes
+2018-08-02	--	v0.4.1	-- Minor changes:wq
