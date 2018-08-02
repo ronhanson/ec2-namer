@@ -14,12 +14,10 @@ import tbx.network
 def main():
     tbx.log.configure_logging_to_screen(debug=False)
     logging.info("Checking EC2 tags, creating public DNS routes and updating hostname if necessary")
-    ec2host.check_ec2_hostname_tags()  # check if instance is a duplicate or not
-    instance_tags = ec2host.create_public_routes()
-    private_hostname = instance_tags.get('private-hostname') if instance_tags else None
-    if private_hostname:
-        logging.info("Ensuring hostname is %s" % private_hostname)
-        tbx.network.ensure_hostname(private_hostname, reboot_if_necessary=True)
+    private_hostname = ec2host.check_ec2_hostname_tags()  # check if instance is a duplicate or not
+    ec2host.create_public_routes()
+    logging.info("Ensuring hostname is %s" % private_hostname)
+    tbx.network.ensure_hostname(private_hostname, reboot_if_necessary=True)
     logging.info("Done")
 
 
