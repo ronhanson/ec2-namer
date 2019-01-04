@@ -61,13 +61,13 @@ def check_ec2_hostname_tags():
             filters['environment'] = env
         group_instances = ec2.get_instances_by_tags(tags=filters)
         group_instances_numbers = [
-            ec2.get_instance_tags(inst).get('number', 1000)
+            ec2.get_instance_tags(inst).get('number', "9999")
             for inst in group_instances
             if inst.id != instance.id and inst.state.get('Name', 'running') == 'running'
         ]
-        group_instances_numbers = sorted(group_instances_numbers)
+        group_instances_numbers = sorted(map(str, group_instances_numbers))
         new_lowest_available_number = None
-        for i in range(1, 999):
+        for i in range(1, 9999):
             if "%04d" % i not in group_instances_numbers:
                 new_lowest_available_number = "%04d" % i
                 break
@@ -158,7 +158,7 @@ def create_public_routes():
 
     if private_zone:
         private_ip_adresses = [
-            (int(ec2.get_instance_tags(i).get('number', 1000)), i.private_ip_address)
+            (int(ec2.get_instance_tags(i).get('number', "9999")), i.private_ip_address)
             for i in instances_same_group
             if i.private_ip_address and i.state.get('Name', 'running') == 'running'
         ]
@@ -168,7 +168,7 @@ def create_public_routes():
 
     if public_zone:
         public_ip_adresses = [
-            (int(ec2.get_instance_tags(i).get('number', 1000)), i.public_ip_address)
+            (int(ec2.get_instance_tags(i).get('number', "9999")), i.public_ip_address)
             for i in instances_same_group
             if i.public_ip_address and i.state.get('Name', 'running') == 'running'
         ]
